@@ -23,25 +23,26 @@ export default function Header() {
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  // Intersection Observer untuk deteksi section yang lebih akurat
   useEffect(() => {
     const sections = navItems
+      // Mencari hanya item dengan href yang dimulai dengan '#'
       .filter((item) => item.href.startsWith("#"))
+      // Ambil ID tanpa '#'
       .map((item) => item.href.substring(1));
 
+    // Intersection Observer untuk deteksi section yang lebih akurat
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const sectionId = entry.target.id;
-            console.log("Section in view:", sectionId);
             setActiveSection(`#${sectionId}`);
           }
         });
       },
       {
-        threshold: 0.6, // 60% of section must be visible
-        rootMargin: "-20% 0px -20% 0px", // ignore top and bottom 20%
+        threshold: 0.3, // 30% of section must be visible
+        rootMargin: "-120px 0px -30% 0px", // Account for fixed header height
       },
     );
 
@@ -70,13 +71,6 @@ export default function Header() {
   const handleNavClick = (href: string) => {
     setActiveSection(href);
     setIsOpen(false);
-
-    if (href.startsWith("#")) {
-      const element = document.getElementById(href.substring(1));
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth" });
-      }
-    }
   };
 
   return (
