@@ -15,7 +15,7 @@ export default function Home() {
       <section
         ref={heroRef}
         id="hero"
-        className="flex h-screen content-center items-center justify-center bg-[#2d2f33]"
+        className="flex h-screen flex-col bg-[#2d2f33] pt-28"
       >
         <Hero />
       </section>
