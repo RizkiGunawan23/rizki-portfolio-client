@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import { useScroll } from "@/components/providers/ScrollProvider";
 import {
   NavigationMenu,
   NavigationMenuItem,
@@ -20,19 +21,22 @@ const navItems = [
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("#hero");
+  const [isNavigating, setIsNavigating] = useState(false);
+  const { scrollToSection } = useScroll();
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
+  // Intersection Observer untuk deteksi scroll manual
   useEffect(() => {
     const sections = navItems
-      // Mencari hanya item dengan href yang dimulai dengan '#'
       .filter((item) => item.href.startsWith("#"))
-      // Ambil ID tanpa '#'
       .map((item) => item.href.substring(1));
 
-    // Intersection Observer untuk deteksi section yang lebih akurat
     const observer = new IntersectionObserver(
       (entries) => {
+        // Skip detection saat sedang navigasi dengan klik
+        if (isNavigating) return;
+
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             const sectionId = entry.target.id;
@@ -42,7 +46,7 @@ export default function Header() {
       },
       {
         threshold: 0.3, // 30% of section must be visible
-        rootMargin: "-120px 0px -30% 0px", // Account for fixed header height
+        rootMargin: "-150px 0px -150px 0px", // Consider header height and viewport
       },
     );
 
@@ -54,27 +58,97 @@ export default function Header() {
       }
     });
 
-    const handleHashChange = () => {
-      const hash = window.location.hash || "#hero";
-      setActiveSection(hash);
+    // Fallback: Manual scroll detection
+    const handleScroll = () => {
+      // Skip detection saat sedang navigasi dengan klik
+      if (isNavigating) return;
+
+      const scrollPosition = window.scrollY + window.innerHeight / 2;
+
+      let currentSection = "#hero"; // default
+
+      sections.forEach((sectionId) => {
+        const element = document.getElementById(sectionId);
+        if (element) {
+          const { offsetTop, offsetHeight } = element;
+          if (
+            scrollPosition >= offsetTop &&
+            scrollPosition < offsetTop + offsetHeight
+          ) {
+            currentSection = `#${sectionId}`;
+          }
+        }
+      });
+
+      setActiveSection(currentSection);
     };
 
-    handleHashChange();
-    window.addEventListener("hashchange", handleHashChange);
+    // Initial check
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll);
 
     return () => {
       observer.disconnect();
-      window.removeEventListener("hashchange", handleHashChange);
+      window.removeEventListener("scroll", handleScroll);
     };
-  }, []);
+  }, [isNavigating]);
 
-  const handleNavClick = (href: string) => {
+  const handleNavClick = (href: string, e: React.MouseEvent) => {
+    e.preventDefault();
     setActiveSection(href);
     setIsOpen(false);
+
+    // Nonaktifkan deteksi section sementara
+    setIsNavigating(true);
+    scrollToSection(href);
+
+    // Deteksi scroll end dengan multiple approach
+    let scrollEndTimer: NodeJS.Timeout;
+    let lastScrollTop = window.pageYOffset;
+    let scrollCheckCount = 0;
+
+    const detectScrollEnd = () => {
+      const currentScrollTop = window.pageYOffset;
+
+      // Reset timer setiap kali ada scroll
+      clearTimeout(scrollEndTimer);
+
+      // Jika posisi scroll tidak berubah dalam beberapa frame
+      if (Math.abs(currentScrollTop - lastScrollTop) < 1) {
+        scrollCheckCount++;
+
+        // Jika posisi stabil selama beberapa frame, scroll selesai
+        if (scrollCheckCount >= 3) {
+          setIsNavigating(false);
+          window.removeEventListener("scroll", detectScrollEnd);
+          return;
+        }
+      } else {
+        scrollCheckCount = 0; // Reset counter jika masih ada pergerakan
+      }
+
+      lastScrollTop = currentScrollTop;
+
+      // Fallback timer untuk memastikan deteksi
+      scrollEndTimer = setTimeout(() => {
+        setIsNavigating(false);
+        window.removeEventListener("scroll", detectScrollEnd);
+      }, 150); // 150ms tanpa scroll signifikan = scroll selesai
+    };
+
+    // Pasang listener untuk mendeteksi scroll end
+    window.addEventListener("scroll", detectScrollEnd, { passive: true });
+
+    // Fallback timeout untuk safety (jika ada masalah dengan event listener)
+    setTimeout(() => {
+      setIsNavigating(false);
+      window.removeEventListener("scroll", detectScrollEnd);
+    }, 3000);
   };
 
   return (
-    <header className="fixed top-8 right-20 left-20 z-50 rounded-2xl border-b border-white/20 bg-white/10 shadow-lg backdrop-blur-sm">
+    <header className="fixed top-8 right-20 left-20 z-50 rounded-2xl border-b border-white/20 bg-white/10 shadow-lg backdrop-blur-3xl md:backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
@@ -83,7 +157,7 @@ export default function Header() {
               href="/"
               className="text-2xl font-bold text-white transition-colors hover:text-gray-300"
             >
-              Rizki Portfolio
+              Rizki Portfolio <span className="text-[#71eaca]">/</span>
             </Link>
           </div>
 
@@ -96,7 +170,7 @@ export default function Header() {
                     <Link
                       data-nav-index={index}
                       href={item.href}
-                      onClick={() => handleNavClick(item.href)}
+                      onClick={(e) => handleNavClick(item.href, e)}
                       className={`relative inline-flex h-9 w-max items-center justify-center px-4 py-2 text-sm font-medium transition-all duration-300 hover:text-white ${
                         activeSection === item.href
                           ? "text-white"
@@ -106,7 +180,7 @@ export default function Header() {
                       {item.label}
                       {/* Individual Underline */}
                       <span
-                        className={`absolute right-0 bottom-0 left-0 h-0.5 bg-white transition-all duration-300 ease-out ${
+                        className={`absolute right-0 bottom-0 left-0 h-0.5 bg-[#71eaca] transition-all duration-300 ease-out ${
                           activeSection === item.href
                             ? "scale-x-100 opacity-100"
                             : "scale-x-0 opacity-0"
@@ -151,7 +225,7 @@ export default function Header() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  onClick={() => handleNavClick(item.href)}
+                  onClick={(e) => handleNavClick(item.href, e)}
                   className={`block px-3 py-2 font-medium transition-colors hover:text-gray-300 ${
                     activeSection === item.href
                       ? "border-l-2 border-white pl-2 text-white"
