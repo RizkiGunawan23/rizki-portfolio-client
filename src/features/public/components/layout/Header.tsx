@@ -148,8 +148,8 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed top-8 right-20 left-20 z-50 rounded-2xl border-b border-white/20 bg-white/10 shadow-lg backdrop-blur-3xl md:backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+    <header className="fixed top-8 right-20 left-20 z-50 rounded-2xl border-b border-white/20 bg-white/10 shadow-lg backdrop-blur-3xl md:backdrop-blur-xl lg:right-48 lg:left-48">
+      <div className="mx-auto max-w-6xl px-6 sm:px-6 lg:px-6">
         <div className="flex items-center justify-between py-4">
           {/* Logo */}
           <div className="flex-shrink-0">
